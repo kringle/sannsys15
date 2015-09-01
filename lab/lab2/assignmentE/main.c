@@ -61,6 +61,8 @@ void phil ( void* id ){
 		pickUpLowestFork(philID);
 		pickUpHighestFork(philID);
 
+		//pickUpFork(philID,LEFT);
+		//pickUpFork(philID,RIGHT);
 		// eat	
 		usleep(100000);
 		printf("Phil %i is eating \n", philID);
