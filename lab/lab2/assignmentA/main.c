@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 
 	int localVar = 100;
 	
-	pid_t pid = fork();
+	pid_t pid = vfork();
 
 	if ( pid == -1 ){
 		perror("fork failed");
@@ -32,6 +32,6 @@ int main(int argc, char **argv)
 	}
 
 	
-	return 0;
+	exit(2);
 }
 
