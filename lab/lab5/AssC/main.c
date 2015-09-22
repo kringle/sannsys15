@@ -61,42 +61,37 @@ int main(int argc, char **argv)
 
 void thread1 ( void ) {
 
-	struct timespec t;
-	clock_gettime(CLOCK_REALTIME, &t);
-
-
-	while(1){
-		
-		printf("Hello\n\r");
-		timespec_add_us(&t,500000);
-		clock_nanosleep(CLOCK_REALTIME,TIMER_ABSTIME,&t,NULL);
-	}
-
-	//checkChannel(CHAN1);
+	checkChannel(CHAN1);	
 }
 
 void thread2 ( void ) {
 	
-	//checkChannel(CHAN2);
+	checkChannel(CHAN2);
 }
 
 void thread3 ( void ) {
 
-	//checkChannel(CHAN3);
+	checkChannel(CHAN3);
 }
 
 
 void checkChannel ( int channel ) {
 
 	set_cpu(CPU_USED);
+	struct timespec t;
+	clock_gettime(CLOCK_REALTIME, &t);
+
 
 	while(1){
-		while(io_read(channel))  // wait
-		{}
-	
-		io_write(channel,LOW);
-		usleep(5);
-		io_write(channel,HIGH);
+
+		timespec_add_us(&t,100);
+		clock_nanosleep(CLOCK_REALTIME,TIMER_ABSTIME,&t,NULL);
+		
+		if ( ! io_read(channel) ) {
+			io_write(channel,LOW);
+			usleep(5);
+			io_write(channel,HIGH);
+		}		
 	}
 }
 
