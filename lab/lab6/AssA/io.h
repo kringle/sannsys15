@@ -26,3 +26,4 @@ void io_write(int channel, int value);
 int io_read(int channel);
 
 #endif /* IO_h */
+

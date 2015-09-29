@@ -5,6 +5,10 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <sched.h>
+#include <sys/mman.h>
+
+#include <native/task.h>
+#include <native/timer.h> //for TM_NOW
 
 #include "io.h"
 
@@ -19,9 +23,9 @@
 #define CPU_USED 1
 
 
-void thread1 ( void );
-void thread2 ( void ); 
-void thread3 ( void );
+void task1_function ( void );
+void task2_function ( void );
+void task3_function ( void );
 void disturb ( void );
 void checkChannel ( int channel );
 int set_cpu(int cpu_number);
@@ -29,23 +33,37 @@ void timespec_add_us(struct timespec *t, long us);
 
 int main(int argc, char **argv)
 {
+	mlockall(MCL_CURRENT|MCL_FUTURE); //lock current mem alloc and future mem alloc main mem
 
 	io_init();
+	rt_print_auto_init(1); //hvis vi trenger printf
+	/*
+	int rt_task_create(RT_TASK *task, const char *name, int stksize, int prio, int mode);
+	int rt_task_start(RT_TASK *task, void(*entry)(void *cookie), void *cookie);
+	int rt_task_set_periodic(RT_TASK *task, RTIME idate, RTIME period); */
 	
-	pthread_t thread_1;
-	pthread_t thread_2;
-	pthread_t thread_3;
-	
+	RT_TASK task1;
+	RT_TASK task2;
+	RT_TASK task3;	
+	RTIME task_period = 1e6; //i nanosekunder 1e5 = 0.1ms
 
-	pthread_create(&thread_1, NULL,thread1,(void *) 1);
-	pthread_create(&thread_2, NULL,thread2,(void *) 2);
-	pthread_create(&thread_3, NULL,thread3,(void *) 3);
+	rt_task_create(&task1, "task 1", 0, 99, 0);
+	rt_task_create(&task2, "task 2", 0, 99, 0);
+	rt_task_create(&task3, "task 3", 0, 99, 0);
+
+	rt_task_start(&task1, &task1_function, NULL);
+	rt_task_start(&task2, &task2_function, NULL);
+	rt_task_start(&task3, &task3_function, NULL);
+
+	rt_task_set_periodic(&task1, TM_NOW, task_period);
+	rt_task_set_periodic(&task2, TM_NOW, task_period);
+	rt_task_set_periodic(&task3, TM_NOW, task_period);	
+
+	
 	
 	int i;
 	pthread_t disturbPtrs[10];
-
-
-	/* start distrubance threads */ 
+	/*
 
 	for ( i = 0 ; i < 10 ; i++ ) {
 		pthread_create(&disturbPtrs[i], NULL, disturb,(void*) i );
@@ -54,25 +72,22 @@ int main(int argc, char **argv)
 	for ( i = 0 ; i < 10 ; i++ ) {
 		pthread_join(disturbPtrs[i],NULL);
 	}
-
-	pthread_join(thread_1,NULL);
-	pthread_join(thread_2,NULL);
-	pthread_join(thread_3,NULL);
-
+	*/
+	while(1){}
 	return 0;
 }
 
-void thread1 ( void ) {
-
+void task1_function ( void ) {
+	
 	checkChannel(CHAN1);	
 }
 
-void thread2 ( void ) {
+void task2_function ( void ) {	
 	
 	checkChannel(CHAN2);
 }
 
-void thread3 ( void ) {
+void task3_function ( void ) {
 
 	checkChannel(CHAN3);
 }
@@ -125,4 +140,5 @@ void timespec_add_us(struct timespec *t, long us){
 		t->tv_sec += 1;
 	}
 } 
+
 

@@ -1,4 +1,4 @@
-TARGET = assA
+TARGET = ass6
 
 XENO_DESTDIR:=
 XENO_CONFIG:=$(XENO_DESTDIR)/usr/bin/xeno-config
@@ -23,3 +23,4 @@ $(TARGET): $(OBJECTS)
 
 clean:
 	rm -f $(TARGET) $(OBJECTS)
+
