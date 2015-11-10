@@ -3,13 +3,15 @@
 #include <time.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
+#include <stdbool.h>
 
 
-#define PERIOD 	0.005 // [s]
+#define PERIOD 	0.003 // [s]
 #define RUNTIME 0.5   // [s]
 
 void setU ( float u );
-void sendMsg ( char msg[20] );
+void sendMsg ( char msg[20], int len );
 
 struct udp_conn conn;
 
@@ -21,29 +23,40 @@ void UDPresp 	( void );
 
 
 char PI_receive_string[20];
-
+char globalMsgArray[20];
 
 pthread_mutex_t UDP_mut;
+pthread_mutex_t newPIval_mut;
+pthread_mutex_t newSIG_mut;
+
+bool newPIval 	= false;
+bool newSIG 	= false;
+
 
 
 int main(int *argc, char argv[]) {
 
 
 	udp_init_client(&conn, 9999, "192.168.0.1");
+	
+	
+
 
 	pthread_mutex_init(&UDP_mut,NULL);
+	pthread_mutex_init(&newPIval_mut,NULL);
+	pthread_mutex_init(&newSIG_mut,NULL);
+	
 
-
-	//pthread_t PI_thread;
-	//pthread_t listen_thread;
+	pthread_t PI_thread;
+	pthread_t listen_thread;
 	pthread_t respond_thread;
 
-	//pthread_create(&PI_thread, 	NULL,	PIreg,	(void *) );
-	//pthread_create(&listen_thread, 	NULL,	UDPlis,	(void *) );
+	pthread_create(&PI_thread, 	NULL,	PIreg,	NULL );
+	pthread_create(&listen_thread, 	NULL,	UDPlis,	NULL );
 	pthread_create(&respond_thread, NULL,	UDPresp, NULL );
 	
-	//pthread_join(PI_thread,NULL);
-	//pthread_join(listen_thread,NULL);
+	pthread_join(PI_thread,NULL);
+	pthread_join(listen_thread,NULL);
 	pthread_join(respond_thread,NULL);
 
 
@@ -67,14 +80,13 @@ void setU ( float u ){
 	pthread_mutex_lock(&UDP_mut);
 	udp_send(&conn,send2Buf,sizeof(send2Buf));
 	pthread_mutex_unlock(&UDP_mut);
-	//printf("%s\n", send2Buf); 
-
+	
 }
 
-void sendMsg ( char msg[20] ){
+void sendMsg ( char msg[30], int len ){
 
 	pthread_mutex_lock(&UDP_mut);
-	udp_send(&conn,msg,sizeof(msg)+1);
+	udp_send(&conn,msg,len);
 	pthread_mutex_unlock(&UDP_mut);
 }
 
@@ -83,22 +95,36 @@ void UDPlis ( void ){
 	char receiveBuf[100];	
 
 	while(1){
-		udp_receive(&conn,receiveBuf,sizeof(receiveBuf));
-		
-		// if "SIGNAL" -> signal responder
+		if(udp_receive(&conn,receiveBuf,sizeof(receiveBuf))){
+			
+			if(!strncmp(receiveBuf,"SI",2)){
+				
+				pthread_mutex_lock(&newSIG_mut);
+				newSIG = true;
+				pthread_mutex_unlock(&newSIG_mut);
+				
 
-		// if "SET" -> send value to PI
-		
+			} else {
+				
+				pthread_mutex_lock(&newPIval_mut);
+				strcpy(globalMsgArray,receiveBuf);
+				newPIval = true;
+				pthread_mutex_unlock(&newPIval_mut);
+							}
+		}	
 	}
 }
 
 void UDPresp 	( void ){
 		
 	while(1){
-
-		// wait for signal from listener
+		// wait for signal from listener		
+		while(!newSIG){}
+		sendMsg("SIGNAL_ACK",11);
+		pthread_mutex_lock(&newSIG_mut);
+		newSIG = false;
+		pthread_mutex_unlock(&newSIG_mut);
 		
-		sendMsg("SIGNAL_ACK");
 	}	
 }
 
@@ -115,7 +141,7 @@ void PIreg 	( void ){
 	struct timespec waitTime;
 	clock_gettime(CLOCK_REALTIME, &waitTime);
 	
-	sendMsg("START");
+	sendMsg("START",6);
 	
 	int i;
 	for ( i = 0 ; i < numRep ; i++ ){
@@ -124,13 +150,21 @@ void PIreg 	( void ){
 		clock_nanosleep(&waitTime);
 
 		// request new value
-		sendMsg("GET");
+		sendMsg("GET",4);
 	
 		// wait for value from listener
-
+		while(!newPIval){ 
+			/* wait */ 
+		}
+		
+		// reset flag
+		pthread_mutex_lock(&newPIval_mut);
+		newPIval = false;
+		pthread_mutex_unlock(&newPIval_mut);
+		
 		// extract value
-		//char * numVal = receiveBuf + 8;	
-		//y = atof(numVal);
+		char * numVal = globalMsgArray + 8;	
+		y = atof(numVal);
 
 
 		// run PI-regulator
@@ -139,13 +173,9 @@ void PIreg 	( void ){
 		u = Kp * error + Ki * integral;
 		
 		setU(u);
-
+		
 	}
-
-
-	
-	sendMsg("STOP");
-	
+	sendMsg("STOP",5);
 }
 
 

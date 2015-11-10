@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 
-#define PERIOD 	0.005 // [s]
+#define PERIOD 	0.002 // [s]
 #define RUNTIME 0.5   // [s]
 
 void setU ( float u );
