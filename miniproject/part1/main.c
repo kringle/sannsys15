@@ -14,7 +14,6 @@ struct udp_conn conn;
 int main(int *argc, char argv[]) {
 
 
-	
 	char sendBuf[100];
 	char receiveBuf[100];	
 	struct timespec waitTime;
@@ -28,11 +27,6 @@ int main(int *argc, char argv[]) {
 	double Ki = 800;
 	double period = PERIOD;
 
-
-	
-	
-	
-	
 	strncpy(sendBuf,"START", sizeof(sendBuf));	
 	udp_send(&conn,sendBuf,sizeof(sendBuf)); //strlen(sendBuf)+1
 	
@@ -81,9 +75,6 @@ void setU ( float u ){
 	static char send2Buf[20] = "SET:";
 	char floatArray[20];
 	snprintf(floatArray,20,"%f",u);
-	
-		
-	
 
 	int i;
 	for ( i = 4; i < 11 ; i++){
